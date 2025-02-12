@@ -1,3 +1,4 @@
+/* eslint-disable indent */
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -5,21 +6,18 @@ import ColorThief from 'colorthief';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { EffectCreative } from 'swiper/modules';
 import { quotes, backgrounds } from '@/data/quotes';
-import { getRandomItem } from '@/utils/random';
+import { getRandomItem, getRandomItemIndex } from '@/utils/random';
 
 import 'swiper/css';
 import 'swiper/css/effect-creative';
 
 const initialBg = getRandomItem(backgrounds);
-const initialQuote = getRandomItem(quotes['ua']);
+const initialQuoteIndex = getRandomItemIndex(quotes);
 
 export default function Home() {
-  const [slides, setSlides] = useState([
-    { bg: initialBg, quote: initialQuote },
-  ]);
+  const [slides, setSlides] = useState([{ bg: '', quoteIndex: 0 }]);
   const [language, setLanguage] = useState('en');
   const [isDarkBg, setIsDarkBg] = useState(true);
-  const [isLoaded, setIsLoaded] = useState(false);
   const [swiperInstance, setSwiperInstance] = useState(null);
 
   const calculateBrightness = useCallback((img) => {
@@ -34,72 +32,86 @@ export default function Home() {
     }
   }, []);
 
-  const getRandomQuote = useCallback(() => {
-    const randomQuote = getRandomItem(quotes[language]);
+  const getRandomQuote = () => {
+    if (!swiperInstance) return;
+
+    const randomQuoteIndex = getRandomItemIndex(quotes);
     const newBg = getRandomItem(backgrounds);
 
     const img = new Image();
     img.crossOrigin = 'Anonymous';
     img.src = newBg;
+
     img.onload = () => {
-      setSlides((prev) => [...prev, { bg: newBg, quote: randomQuote }]);
+      setSlides((prev) => [
+        ...prev,
+        { bg: newBg, quoteIndex: randomQuoteIndex },
+      ]);
       calculateBrightness(img);
-      swiperInstance?.slideNext();
+
+      setTimeout(() => {
+        swiperInstance.slideNext();
+      }, 50);
     };
-  }, [language, calculateBrightness, swiperInstance]);
+  };
+
+  const changeLanguage = useCallback(() => {
+    const newLanguage = language === 'ua' ? 'en' : 'ua';
+    console.log('newLanguage: ', newLanguage);
+
+    setLanguage(newLanguage);
+  }, [language]);
 
   useEffect(() => {
+    setSlides([{ bg: initialBg, quoteIndex: initialQuoteIndex }]);
+
     const img = new Image();
     img.crossOrigin = 'Anonymous';
     img.src = initialBg;
     img.onload = () => {
       calculateBrightness(img);
-      setIsLoaded(true);
     };
-  }, []);
-
-  useEffect(() => {
-    getRandomQuote();
-  }, [language]);
-
-  if (!isLoaded) {
-    return null;
-  }
+  }, [calculateBrightness]);
 
   return (
     <div className='relative w-screen h-screen overflow-hidden'>
       <Swiper
         modules={[EffectCreative]}
         effect={'creative'}
-        speed={1500} // Скорость анимации в миллисекундах
+        speed={1500}
         creativeEffect={{
           prev: {
             translate: ['-100%', 0, 0],
-            duration: 1500, // Длительность эффекта
+            duration: 1500,
           },
           next: {
             translate: ['100%', 0, 0],
-            duration: 1500, // Длительность эффекта
+            duration: 1500,
           },
         }}
         allowTouchMove={false}
         onSwiper={setSwiperInstance}
         className='w-full h-full'
       >
-        {slides.map((slide, index) => (
-          <SwiperSlide key={index}>
-            <div
-              className='relative w-full h-full bg-cover bg-center bg-no-repeat'
-              style={{ backgroundImage: `url(${slide.bg})` }}
-            >
-              <div className='absolute top-12 left-12 max-w-2xl'>
-                <p className='text-6xl text-left font-bold italic text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] leading-relaxed'>
-                  {slide.quote}
-                </p>
+        {slides.map((slide, index) => {
+          // console.log('quotes: ', quotes);
+          // console.log('slide: ', slide);
+          // console.log('language: ', language);
+          return (
+            <SwiperSlide key={index}>
+              <div
+                className='relative w-full h-full bg-cover bg-center bg-no-repeat'
+                style={{ backgroundImage: `url(${slide.bg})` }}
+              >
+                <div className='absolute top-12 left-12 max-w-2xl'>
+                  <p className='text-7xl text-left font-bold italic text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] leading-relaxed'>
+                    {quotes[slide.quoteIndex][language]}
+                  </p>
+                </div>
               </div>
-            </div>
-          </SwiperSlide>
-        ))}
+            </SwiperSlide>
+          );
+        })}
       </Swiper>
 
       <div
@@ -109,13 +121,13 @@ export default function Home() {
         <button
           onClick={(e) => {
             e.stopPropagation();
-            setLanguage(language === 'ua' ? 'en' : 'ua');
+            changeLanguage();
           }}
-          className={`absolute top-4 right-4 w-16 h-16 rounded-full backdrop-blur-sm transition-all duration-300 flex items-center justify-center font-bold
+          className={`z-11 absolute top-4 right-4 w-16 h-16 rounded-full backdrop-blur-sm transition-all duration-300 flex items-center justify-center font-bold
             ${
               isDarkBg
-                ? 'bg-black/20 hover:bg-white/30 text-white'
-                : 'bg-white/20 hover:bg-black/30 text-black'
+                ? 'bg-white/20 hover:bg-white/30 text-white'
+                : 'bg-black/20 hover:bg-black/30 text-black'
             }`}
         >
           {language === 'ua' ? 'UA' : 'EN'}

@@ -1,8 +1,8 @@
 const config = {
   github: {
-    username: 'your-username',
-    repository: 'love-quotes'
-  }
+    username: 'tkachandrei94',
+    repository: 'love-quotes',
+  },
 };
 
-module.exports = config; 
+module.exports = config;

@@ -1,2 +1,7 @@
-export const getRandomItem = (array) =>
-  array[Math.floor(Math.random() * array.length)];
+export const getRandomItem = (array) => {
+  return array[Math.floor(Math.random() * array.length)];
+};
+
+export const getRandomItemIndex = (array) => {
+  return Math.floor(Math.random() * array.length);
+};
