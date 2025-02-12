@@ -1,131 +1,126 @@
 'use client';
 
-import { useState } from 'react';
-import { 
-  Box, 
-  Button, 
-  Container, 
-  Typography, 
-  Paper,
-  ThemeProvider,
-  createTheme
-} from '@mui/material';
-import { pink, blue, purple } from '@mui/material/colors';
+import { useState, useEffect, useCallback } from 'react';
+import ColorThief from 'colorthief';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { EffectCreative } from 'swiper/modules';
 import { quotes, backgrounds } from '@/data/quotes';
+import { getRandomItem } from '@/utils/random';
 
-const theme = createTheme({
-  palette: {
-    male: {
-      main: blue[500],
-      contrastText: '#fff',
-    },
-    female: {
-      main: pink[500],
-      contrastText: '#fff',
-    },
-    next: {
-      main: purple[500],
-      contrastText: '#fff',
-    },
-  },
-});
+import 'swiper/css';
+import 'swiper/css/effect-creative';
+
+const initialBg = getRandomItem(backgrounds);
+const initialQuote = getRandomItem(quotes['ua']);
 
 export default function Home() {
-  const [selectedGender, setSelectedGender] = useState(null);
-  const [currentQuote, setCurrentQuote] = useState('');
-  const [currentBg, setCurrentBg] = useState(backgrounds[0]);
+  const [slides, setSlides] = useState([
+    { bg: initialBg, quote: initialQuote },
+  ]);
+  const [language, setLanguage] = useState('en');
+  const [isDarkBg, setIsDarkBg] = useState(true);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [swiperInstance, setSwiperInstance] = useState(null);
 
-  const getRandomQuote = () => {
-    const filteredQuotes = quotes.filter(
-      quote => quote.gender === selectedGender || quote.gender === 'both'
-    );
-    const randomQuote = filteredQuotes[Math.floor(Math.random() * filteredQuotes.length)];
-    setCurrentQuote(randomQuote.text);
-    
-    const newBg = backgrounds[Math.floor(Math.random() * backgrounds.length)];
-    setCurrentBg(newBg);
-  };
+  const calculateBrightness = useCallback((img) => {
+    const colorThief = new ColorThief();
+    try {
+      const color = colorThief.getColor(img);
+      const brightness =
+        (color[0] * 299 + color[1] * 587 + color[2] * 114) / 1000;
+      setIsDarkBg(brightness < 128);
+    } catch (error) {
+      console.error('Error calculating brightness:', error);
+    }
+  }, []);
 
-  const handleGenderSelect = (gender) => {
-    setSelectedGender(gender);
+  const getRandomQuote = useCallback(() => {
+    const randomQuote = getRandomItem(quotes[language]);
+    const newBg = getRandomItem(backgrounds);
+
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.src = newBg;
+    img.onload = () => {
+      setSlides((prev) => [...prev, { bg: newBg, quote: randomQuote }]);
+      calculateBrightness(img);
+      swiperInstance?.slideNext();
+    };
+  }, [language, calculateBrightness, swiperInstance]);
+
+  useEffect(() => {
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.src = initialBg;
+    img.onload = () => {
+      calculateBrightness(img);
+      setIsLoaded(true);
+    };
+  }, []);
+
+  useEffect(() => {
     getRandomQuote();
-  };
+  }, [language]);
+
+  if (!isLoaded) {
+    return null;
+  }
 
   return (
-    <ThemeProvider theme={theme}>
-      <Box
-        sx={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundImage: `url(${currentBg})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          transition: 'background-image 0.5s ease-in-out',
-          padding: 2,
+    <div className='relative w-screen h-screen overflow-hidden'>
+      <Swiper
+        modules={[EffectCreative]}
+        effect={'creative'}
+        speed={1500} // Скорость анимации в миллисекундах
+        creativeEffect={{
+          prev: {
+            translate: ['-100%', 0, 0],
+            duration: 1500, // Длительность эффекта
+          },
+          next: {
+            translate: ['100%', 0, 0],
+            duration: 1500, // Длительность эффекта
+          },
         }}
+        allowTouchMove={false}
+        onSwiper={setSwiperInstance}
+        className='w-full h-full'
       >
-        <Container maxWidth="sm">
-          <Paper
-            elevation={3}
-            sx={{
-              padding: 4,
-              backgroundColor: 'rgba(255, 255, 255, 0.9)',
-              backdropFilter: 'blur(10px)',
-            }}
-          >
-            {!selectedGender ? (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <Typography variant="h4" component="h1" align="center" gutterBottom>
-                  Выберите пол
-                </Typography>
-                <Button
-                  variant="contained"
-                  color="male"
-                  size="large"
-                  onClick={() => handleGenderSelect('male')}
-                  sx={{ py: 2 }}
-                >
-                  Мужской
-                </Button>
-                <Button
-                  variant="contained"
-                  color="female"
-                  size="large"
-                  onClick={() => handleGenderSelect('female')}
-                  sx={{ py: 2 }}
-                >
-                  Женский
-                </Button>
-              </Box>
-            ) : (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                <Typography 
-                  variant="h5" 
-                  component="p" 
-                  align="center"
-                  sx={{ 
-                    fontStyle: 'italic',
-                    lineHeight: 1.6 
-                  }}
-                >
-                  {currentQuote}
-                </Typography>
-                <Button
-                  variant="contained"
-                  color="next"
-                  size="large"
-                  onClick={getRandomQuote}
-                  sx={{ py: 2 }}
-                >
-                  Следующая цитата
-                </Button>
-              </Box>
-            )}
-          </Paper>
-        </Container>
-      </Box>
-    </ThemeProvider>
+        {slides.map((slide, index) => (
+          <SwiperSlide key={index}>
+            <div
+              className='relative w-full h-full bg-cover bg-center bg-no-repeat'
+              style={{ backgroundImage: `url(${slide.bg})` }}
+            >
+              <div className='absolute top-12 left-12 max-w-2xl'>
+                <p className='text-6xl text-left font-bold italic text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] leading-relaxed'>
+                  {slide.quote}
+                </p>
+              </div>
+            </div>
+          </SwiperSlide>
+        ))}
+      </Swiper>
+
+      <div
+        onClick={getRandomQuote}
+        className='absolute inset-0 cursor-pointer z-10'
+      >
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setLanguage(language === 'ua' ? 'en' : 'ua');
+          }}
+          className={`absolute top-4 right-4 w-16 h-16 rounded-full backdrop-blur-sm transition-all duration-300 flex items-center justify-center font-bold
+            ${
+              isDarkBg
+                ? 'bg-black/20 hover:bg-white/30 text-white'
+                : 'bg-white/20 hover:bg-black/30 text-black'
+            }`}
+        >
+          {language === 'ua' ? 'UA' : 'EN'}
+        </button>
+      </div>
+    </div>
   );
-} 
+}

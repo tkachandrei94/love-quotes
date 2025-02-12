@@ -5,8 +5,8 @@ const inter = Inter({ subsets: ['latin', 'cyrillic'] });
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="ru">
-      <body className={inter.className}>{children}</body>
+    <html lang='ru'>
+      <body className={`${inter.className} antialiased`}>{children}</body>
     </html>
   );
-} 
+}
