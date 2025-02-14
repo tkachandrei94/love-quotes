@@ -5,3 +5,10 @@ export const getRandomItem = (array) => {
 export const getRandomItemIndex = (array) => {
   return Math.floor(Math.random() * array.length);
 };
+
+export const getBasePath = () => {
+  if (process.env.NODE_ENV === 'production') {
+    return '/love-quotes';
+  }
+  return '';
+};
